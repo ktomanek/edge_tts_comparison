@@ -1,0 +1,6 @@
+venv
+__pycache__
+# all downloaded models
+*onnx
+*onnx.json
+*bin
