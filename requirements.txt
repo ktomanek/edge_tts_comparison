@@ -2,4 +2,5 @@ soundfile
 librosa
 numpy
 kokoro-onnx
-
+onnxruntime
+piper-phonemize-cross
