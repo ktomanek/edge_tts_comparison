@@ -8,18 +8,16 @@
 # python stream_llm_to_tts.py --piper-model en_US-lessac-low.onnx --prompt "Explain to me what a cat does all day. Use exactly 3 sentences."  --speaking-rate=5.0
 
 import ollama
-import numpy as np
 import sounddevice as sd
-from piper.voice import PiperVoice
 import nltk
 from nltk.tokenize import sent_tokenize
 import time
 import threading
 import argparse
 import queue
-import os
 import signal
 import sys
+import tts_lib
 
 # Download nltk data if not already present
 try:
@@ -31,21 +29,37 @@ MAX_TEXT_BUFFER = 200
 MIN_TEXT_BUFFER = 100
 
 class OllamaToPiperStreamer:
-    def __init__(self, piper_model_path, ollama_model_name="gemma3:1b", 
+    def __init__(self, ollama_model_name="gemma3:1b", 
+                 tts_engine='piper',
                  speaking_rate=1.0, # higher numbers means faster
-                 sample_rate=None):
+                 tts_model_path=None,
+                 ):
         """Initialize the streamer with Piper and Ollama models."""
-        print(f"Initializing with Piper model: {piper_model_path}")
         self.ollama_model_name = ollama_model_name
+        print(f"Using Ollama model: {self.ollama_model_name}")
+
+        if tts_engine == 'piper':
+            print('Initializing Piper TTS')
+            if tts_model_path:
+                print(f"Initializing with tts model: {tts_model_path}")                
+                self.tts = tts_lib.TTS_Piper(tts_model_path)
+            else:
+                self.tts = tts_lib.TTS_Piper()
+        elif tts_engine == 'kokoro':
+            print('Initializing Kokoro TTS')
+            if tts_model_path:
+                print(f"Initializing with tts model: {tts_model_path}")                
+                self.tts = tts_lib.TTS_Kokoro(tts_model_path)
+            else:
+                self.tts = tts_lib.TTS_Kokoro()
+        else:
+            raise ValueError('Unknown tts engine.')
         
-        # Initialize Piper TTS
-        self.piper_voice = PiperVoice.load(piper_model_path)
-        
-        # Get sample rate from Piper config if not specified
-        self.sample_rate = sample_rate if sample_rate else self.piper_voice.config.sample_rate
+        self.sample_rate = self.tts.get_sample_rate()
         print(f"Using sample rate: {self.sample_rate} Hz")
         
         self.speaking_rate = speaking_rate
+        print(f"Using speaking rate: {self.speaking_rate}")        
 
         # Initialize audio stream
         self.audio_stream = None
@@ -193,19 +207,11 @@ class OllamaToPiperStreamer:
         print(f"Speaking: {text}")
         
         try:
-            # Process through Piper
-            synthesis_args = {
-                "length_scale": 1.0 / speed,  # Higher values = slower speech
-                "noise_scale": noise_scale,   # Controls variability in voice
-                "noise_w": noise_w            # Controls phoneme width variation
-            }
-            for audio_bytes in self.piper_voice.synthesize_stream_raw(text, **synthesis_args):
-                if self.stop_event.is_set():
-                    break
-                    
-                audio_data = np.frombuffer(audio_bytes, dtype=np.int16)
-                self.audio_stream.write(audio_data)
-        
+            audio_data, sample_rate = self.tts.synthesize(
+                text, target_sr = self.sample_rate, 
+                speaking_rate=speed, return_as_int16=True)
+            self.audio_stream.write(audio_data)
+
         except Exception as e:
             print(f"Error synthesizing speech: {e}")
         
@@ -276,8 +282,9 @@ class OllamaToPiperStreamer:
 def main():
     """Main function to run the Ollama to Piper streamer."""
     parser = argparse.ArgumentParser(description="Stream text from Ollama to Piper TTS")
-    parser.add_argument("--piper-model", required=True, help="Path to the Piper model (.onnx file)")
     parser.add_argument("--ollama-model-name", default="gemma3:1b", help="Ollama model to use (default: llama3)")
+    parser.add_argument("--tts_engine", choices=['piper', 'kokoro'], default="piper", help="which tts engine to use; piper is much faster than kokoro.")
+    parser.add_argument("--tts_model_path", required=False, help="Path to the tts model (.onnx file)")
     parser.add_argument("--speaking-rate", type=float, default=1.0, help="how fast should generated speech be, 1.0 is default, higher numbers mean faster speech")
     parser.add_argument("--prompt", help="Text prompt to send to Ollama")
     parser.add_argument("--generate", action="store_true", help="Use generate API instead of chat API")
@@ -287,9 +294,10 @@ def main():
     
     # Initialize the streamer
     streamer = OllamaToPiperStreamer(
-        piper_model_path=args.piper_model,
         ollama_model_name=args.ollama_model_name,
-        speaking_rate=args.speaking_rate
+        tts_engine=args.tts_engine,
+        speaking_rate=args.speaking_rate,
+        tts_model_path=args.tts_model_path
     )
     
     try:
