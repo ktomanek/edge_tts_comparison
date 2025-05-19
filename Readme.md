@@ -42,8 +42,10 @@ environment | Kokoro | Piper
 
 # Stream LLM output into TTS
 
-Generate text output via an LLM using Ollama and generate synthesized speech output via streaming through Piper.
+Generate text output via an LLM using Ollama and synthesize speech in streaming-fashing.
+Using Piper, this works in realtime; Kokoro seems too slow for that even on a Mac M2.
 
+For Kokoro, when increasing the speaking speed, first word is often cut off.
 ## Installation
 
 * install ollama locally: https://ollama.com/download
@@ -64,7 +66,16 @@ Generate text output via an LLM using Ollama and generate synthesized speech out
 ```
 python stream_llm_to_tts.py \
     --ollama-model-name=gemma3:1b \
-    --piper-model en_US-lessac-low.onnx  \
-    --speaking-rate=4.0 \
+    --tts_engine piper  \
+    --speaking-rate=2.0 \
+    --prompt "Explain to me what a cat does all day. Use exactly 3 sentences."
+```
+
+
+```
+python stream_llm_to_tts.py \
+    --ollama-model-name=gemma3:1b \
+    --tts_engine kokoro  \
+    --speaking-rate=1.0 \
     --prompt "Explain to me what a cat does all day. Use exactly 3 sentences."
 ```
