@@ -36,5 +36,35 @@ environment | Kokoro | Piper
 | -- | -- | -- |
 | MacBook Pro M2 | 3.3s | 0.15s|
 | Raspberry Pi 5 | 8.0s| 0.66s|
-## Raspberry Pi 5
 
+
+
+
+# Stream LLM output into TTS
+
+Generate text output via an LLM using Ollama and generate synthesized speech output via streaming through Piper.
+
+## Installation
+
+* install ollama locally: https://ollama.com/download
+* then pull the model you want ot use, eg: 
+
+```ollama pull gemma3:1b```
+
+* then install [ollama python library](https://github.com/ollama/ollama-python) 
+
+```pip install ollama```
+
+* other dependencies
+
+```pip install sounddevice```
+
+## Run
+
+```
+python stream_llm_to_tts.py \
+    --ollama-model-name=gemma3:1b \
+    --piper-model en_US-lessac-low.onnx  \
+    --speaking-rate=4.0 \
+    --prompt "Explain to me what a cat does all day. Use exactly 3 sentences."
+```

@@ -4,4 +4,6 @@ __pycache__
 *onnx
 *onnx.json
 *bin
+experimental
 TODO.md
+*.wav
