@@ -87,9 +87,14 @@ class OllamaToPiperStreamer:
     
     def _start_audio_stream(self):
         """Initialize and start the audio output stream."""
+
+        # increase buffer size if needed, esp on slower devices like raspberry pi
+        buffer_size = 1024
+
         if self.audio_stream is None:
             self.audio_stream = sd.OutputStream(
                 samplerate=self.sample_rate,
+                blocksize=buffer_size,
                 channels=1,
                 dtype='int16'
             )

@@ -59,7 +59,8 @@ For Kokoro, when increasing the speaking speed, first word is often cut off.
 
 * other dependencies
 
-```pip install sounddevice```
+* ```pip install sounddevice nltk```
+* download sentence splitter: ```python -c "import nltk; nltk.download('punkt_tab')```
 
 ## Run
 

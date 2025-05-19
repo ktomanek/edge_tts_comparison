@@ -21,7 +21,6 @@ class TTS_Piper(TTS):
         self.model_path = model_path
         self.piper_voice = piper.voice.PiperVoice.load(model_path)
         self.sampling_rate = self.piper_voice.config.sample_rate        
-        print('SAMPLE RATE:', self.sampling_rate)
 
     def get_sample_rate(self):
         return self.sampling_rate
