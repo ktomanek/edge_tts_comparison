@@ -1,4 +1,5 @@
 venv
+venv_v312
 __pycache__
 # all downloaded models
 *onnx
