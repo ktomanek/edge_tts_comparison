@@ -7,6 +7,7 @@
 #
 # python stream_llm_to_tts.py --piper-model en_US-lessac-low.onnx --prompt "Explain to me what a cat does all day. Use exactly 3 sentences."  --speaking-rate=5.0
 
+import json
 import ollama
 import sounddevice as sd
 import nltk
@@ -46,7 +47,9 @@ But most importantly, do not output any sort of formatting information.
 Do not start your sentences with 'okay' always. Be friendly and helpful."""
 
 class OllamaToPiperStreamer:
-    def __init__(self, ollama_model_name="gemma3:1b", 
+    def __init__(self, 
+                 ollama_model_name="gemma3:1b", 
+                 system_prompt=DEFAULT_SYSTEM_PROMPT,
                  tts_engine='piper',
                  speaking_rate=1.0, # higher numbers means faster
                  tts_model_path=None,
@@ -55,6 +58,12 @@ class OllamaToPiperStreamer:
         self.ollama_model_name = ollama_model_name
         print(f"Using Ollama model: {self.ollama_model_name}")
 
+        # initialize conversation context
+        self.messages = [
+            {'role': 'system', 'content': system_prompt},
+        ]
+
+        # load TTS
         if tts_engine == 'piper':
             print('Initializing Piper TTS')
             if tts_model_path:
@@ -255,61 +264,47 @@ class OllamaToPiperStreamer:
         # Give a moment for audio to finish playing
         time.sleep(0.5)
     
-    def process_prompt(self, system_prompt, user_prompt, chat_mode=True):
+    def process_prompt(self, user_prompt, verbose=False):
         """Process a prompt through Ollama and stream to Piper."""
         
-        try:
-            if chat_mode:
-                # Use the chat API
-                messages = [
-                    {'role': 'system', 'content': system_prompt},
-                    {'role': 'user', 'content': user_prompt}
-                ]
-                print(f"Sending prompt to {self.ollama_model_name}: {messages}")
-                response = ollama.chat(
-                    model=self.ollama_model_name,
-                    messages=messages,
-                    stream=True
-                )
-                
-                for chunk in response:
-                    if self.stop_event.is_set():
-                        break
-                        
-                    if chunk and 'message' in chunk and 'content' in chunk['message']:
-                        text_chunk = chunk['message']['content']
+        # TODO remove old messages when context too long
+        self.messages.append({'role': 'user', 'content': user_prompt})
 
+        if verbose:
+            print('>> context length: turns:', len(self.messages) / 2)
+            print('>> context length: characters:', len(json.dumps(self.messages)))
 
-                        # remove asterisks and other formatting info from the text
-                        text_chunk = clean_llm_output(text_chunk)
+            pretty_json = json.dumps(self.messages, indent=2)
+            print(f">> Sending prompt to {self.ollama_model_name}: {pretty_json}")
 
-                        self._process_text_chunk(text_chunk)
-            else:
-                # Use the generate API
-                full_prompt = f"System: {system_prompt}\n\nUser: {user_prompt}\n\nAssistant:"                
-                print(f"---\nSending prompt to {self.ollama_model_name}: {full_prompt}\n---")
-                response = ollama.generate(
-                    model=self.ollama_model_name,
-                    prompt=full_prompt,
-                    stream=True
-                )
-                
-                for chunk in response:
-                    if self.stop_event.is_set():
-                        break
-                        
-                    if chunk and 'response' in chunk:
-                        text_chunk = chunk['response']
-                        self._process_text_chunk(text_chunk)
-            
-            # Process any remaining text
-            self._finish_processing()
-            
-        except Exception as e:
-            print(f"Error from Ollama: {e}")
+        response = ollama.chat(
+            model=self.ollama_model_name,
+            messages=self.messages,
+            stream=True
+        )
         
-        finally:
-            print("Finished processing prompt")
+        text_chunks = []
+        for chunk in response:
+            if self.stop_event.is_set():
+                break
+                
+            if chunk and 'message' in chunk and 'content' in chunk['message']:
+                text_chunk = chunk['message']['content']
+
+
+                # remove asterisks and other formatting info from the text
+                text_chunk = clean_llm_output(text_chunk)
+
+                self._process_text_chunk(text_chunk)            
+                text_chunks.append(text_chunk)
+
+        assistant_response = ''.join(text_chunks)
+        self.messages.append({'role': 'assistant', 'content': assistant_response})
+
+
+        # Process any remaining text
+        self._finish_processing()
+            
 
 
 def main():
@@ -321,14 +316,15 @@ def main():
     parser.add_argument("--speaking-rate", type=float, default=1.0, help="how fast should generated speech be, 1.0 is default, higher numbers mean faster speech")
     parser.add_argument("--system_prompt", default=DEFAULT_SYSTEM_PROMPT, help="Instructions for the model.")
     parser.add_argument("--user_prompt", help="Text prompt to send to Ollama")
-    parser.add_argument("--generate", action="store_true", help="Use generate API instead of chat API")
     parser.add_argument("--interactive", action="store_true", help="Run in interactive mode")
+    parser.add_argument("--verbose", action="store_true", help="Verbose status info")
     
     args = parser.parse_args()
     
     # Initialize the streamer
     streamer = OllamaToPiperStreamer(
         ollama_model_name=args.ollama_model_name,
+        system_prompt=args.system_prompt,
         tts_engine=args.tts_engine,
         speaking_rate=args.speaking_rate,
         tts_model_path=args.tts_model_path
@@ -346,10 +342,10 @@ def main():
                     break
                 
                 if prompt:
-                    streamer.process_prompt(system_prompt, prompt, chat_mode=not args.generate)
+                    streamer.process_prompt(prompt, args.verbose)
         
         elif args.user_prompt:
-            streamer.process_prompt(system_prompt, args.user_prompt, chat_mode=not args.generate)
+            streamer.process_prompt(args.user_prompt, args.verbose)
         
         else:
             parser.print_help()

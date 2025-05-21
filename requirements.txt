@@ -5,3 +5,5 @@ kokoro-onnx
 onnxruntime
 piper-phonemize-cross
 emoji
+nltk
+ollama
