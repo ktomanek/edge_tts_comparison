@@ -25,16 +25,18 @@ try:
 except LookupError:
     nltk.download('punkt')
 
-MAX_TEXT_BUFFER = 100
-MIN_TEXT_BUFFER = 50
+MAX_TEXT_BUFFER = 125
+MIN_TEXT_BUFFER = 75
 
 import re
+import emoji
 
 def clean_llm_output(text):
     """
     Remove formatting symbols.
     """
     text = text.replace('*', ' ')
+    text = emoji.replace_emoji(text, replace='')
     return text
 
 DEFAULT_SYSTEM_PROMPT = """You are an assistant that runs on an edge device. A person is interacting with you via voice. 

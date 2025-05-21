@@ -4,3 +4,4 @@ numpy
 kokoro-onnx
 onnxruntime
 piper-phonemize-cross
+emoji
