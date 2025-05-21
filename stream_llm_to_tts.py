@@ -19,6 +19,7 @@ import queue
 import signal
 import sys
 import tts_lib
+import time 
 
 # Download nltk data if not already present
 try:
@@ -57,6 +58,21 @@ class OllamaToPiperStreamer:
         """Initialize the streamer with Piper and Ollama models."""
         self.ollama_model_name = ollama_model_name
         print(f"Using Ollama model: {self.ollama_model_name}")
+
+        self.ollama_options={
+            "temperature": 0.3,  # lower temperature for speed
+            "num_predict": -1,  # unlimited
+            #"num_ctx": 1024
+        }
+
+        # warm up model
+        t1 = time.time()
+        ollama.chat(
+            model=self.ollama_model_name,
+            messages=[{"role": "user", "content": "hi"}],
+            stream=False
+        )        
+        print(f"Ollama model warmed up in {time.time()-t1} secs.")
 
         # initialize conversation context
         self.messages = [
@@ -267,7 +283,6 @@ class OllamaToPiperStreamer:
     def process_prompt(self, user_prompt, verbose=False):
         """Process a prompt through Ollama and stream to Piper."""
         
-        # TODO remove old messages when context too long
         self.messages.append({'role': 'user', 'content': user_prompt})
 
         if verbose:
@@ -280,7 +295,8 @@ class OllamaToPiperStreamer:
         response = ollama.chat(
             model=self.ollama_model_name,
             messages=self.messages,
-            stream=True
+            stream=True,
+            options=self.ollama_options
         )
         
         text_chunks = []
