@@ -8,3 +8,4 @@ __pycache__
 experimental
 TODO.md
 *.wav
+*egg*
