@@ -6,7 +6,8 @@ Compare different small TTS models running on edge devices.
 * ```pip install -e .```
 
 * ensure espeak (or espeak-ng) is installed on your system and the library path set
-    * eg, on Mac install: ```brew install espeak-ng```
+    * on Mac install: ```brew install espeak-ng```
+    * on Linux: ```sudo apt-get install espeak-ng```
     * ensure ```PHONEMIZER_ESPEAK_LIBRARY``` is set, if it isn't follow below instruction to set it:
         * find the library with: ```brew list espeak-ng | grep dylib```
         * set accordingly, eg: ```export PHONEMIZER_ESPEAK_LIBRARY=/opt/homebrew/Cellar/espeak-ng/1.52.0/lib/libespeak-ng.1.dylib```
@@ -50,7 +51,7 @@ inference time after warmup:
 environment | Kokoro | Piper | KittenTTS
 | -- | -- | -- | -- |
 | MacBook Pro M2 | 0.75s | 0.085s| 0.68s
-| Raspberry Pi 5 | 8.0s| 0.66s| - 
+| Raspberry Pi 5 | 4.83s| 0.54s| 4.13s 
 
 
 
