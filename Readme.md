@@ -48,7 +48,7 @@ The best way to resolve this seems to be:
 inference time after warmup:
 
 environment | Kokoro | Piper | KittenTTS
-| -- | -- | -- |
+| -- | -- | -- | -- |
 | MacBook Pro M2 | 0.75s | 0.085s| 0.68s
 | Raspberry Pi 5 | 8.0s| 0.66s| - 
 
