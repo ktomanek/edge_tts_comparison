@@ -1,3 +1,8 @@
+# requirements structured so that they support piper, kokoro and kitten tts and resolve dependency problems
+# importantly:
+# do not install phonemizer, kokoro brings a fork of phonemizer which is all we need and that it depends on
+# kitten-tts needs phonemizer, but can work with the one that kokoro brings
+# piper needs piper-phonemize-cross and this does not conflict with kokoro's phonemizer fork
 soundfile
 librosa
 numpy
@@ -6,4 +11,6 @@ onnxruntime
 piper-phonemize-cross
 emoji
 nltk
-ollama
+num2words
+spacy
+espeakng_loader
