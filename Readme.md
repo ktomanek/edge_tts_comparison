@@ -12,29 +12,9 @@ Compare different small TTS models running on edge devices.
         * find the library with: ```brew list espeak-ng | grep dylib```
         * set accordingly, eg: ```export PHONEMIZER_ESPEAK_LIBRARY=/opt/homebrew/Cellar/espeak-ng/1.52.0/lib/libespeak-ng.1.dylib```
 
-## KittenTTS
-
-* code and dependencies included in this package
-* download model files: ```sh download_kittentts_models.sh```
-
-## Kokoro
-
-* install all deps: ```pip install -r requirements.txt```
-* download model files: ```sh download_kokoro_models.sh```
-
-## Piper
-
-while there is ```pip install piper-tts``` this doesn't work due to circular dependencies and a conflict on the version on piper-phonemize.
-
-The best way to resolve this seems to be:
-
-* ```pip install onnxruntime piper-phonemize-cross```
-* ```git clone https://github.com/rhasspy/piper.git``` 
-* delete the requirements file: ```rm piper/src/python_run/requirements.txt```
-* then ```cd piper/src/python_run/``` and run run ```pip install .```
-
-* download model files: ```sh download_piper_models.sh```
-
+* download models:
+    * kokoro: ```sh download_kokoro_models.sh``` (see different models in the script)
+    * piper: ```sh download_piper_models.sh``` (many other voices are available!)
 
 # Performance
 
@@ -52,8 +32,6 @@ environment | Kokoro | Piper | KittenTTS
 | -- | -- | -- | -- |
 | MacBook Pro M2 | 0.75s | 0.085s| 0.68s
 | Raspberry Pi 5 | 4.83s| 0.54s| 4.13s 
-
-
 
 
 # Stream LLM output into TTS

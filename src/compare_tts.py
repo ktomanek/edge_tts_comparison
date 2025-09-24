@@ -2,13 +2,14 @@ from tts_lib import tts_engines
 import time 
 import soundfile as sf
 
-# this might be different on your system (see Readme for installation instructions)
-import os
-os.environ['PHONEMIZER_ESPEAK_LIBRARY']="/opt/homebrew/Cellar/espeak-ng/1.52.0/lib/libespeak-ng.1.dylib"
+# # not needed it espeak is found, but if you encounter problems, consider setting the path
+# # this might be different on your system (see Readme for installation instructions)
+# import os
+# os.environ['PHONEMIZER_ESPEAK_LIBRARY']="/opt/homebrew/Cellar/espeak-ng/1.52.0/lib/libespeak-ng.1.dylib"
 
 
 # text = 'In a dramatic overnight operation, India said it launched missile and air strikes on nine sites across Pakistan.'
-text = "The quick brown fox jumps over the lazy dog. Dr. Smith asked whether it's 3:30 PM today."
+text = "The quick brown fox jumps over the lazy dog. Dr Smith asked whether it's 4:30 PM today."
 target_sr = 16000
 
 print(f"Running Kitten TTS...")

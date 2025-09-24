@@ -2,7 +2,6 @@
 import numpy as np
 import librosa
 
-
 class TTS:
     def __init__(self):
         pass
@@ -14,16 +13,21 @@ class TTS:
         raise NotImplementedError("This method should be overridden by subclasses.")
 
     def warmup(self):
-        self.synthesize("This is a warmup text to initialize the TTS engine. Cats are great, I love cats!")
+        print("Warming up model...")
+        for i in range(0,3):
+            self.synthesize("This is a warmup text to initialize the TTS engine. Cats are great, I love cats!")
 
 class TTS_KittenTTS(TTS):
-    def __init__(self, 
-                 model_path: str='models/kitten_tts/kitten_tts_nano_v0_1.onnx', 
-                 voices_path: str='models/kitten_tts/voices.npz',
+    def __init__(self, model_path: str='KittenML/kitten-tts-nano-0.2',
                  voice: str='expr-voice-2-m'):
-        from kittentts import KittenTTS_1_Onnx
-        print(f"Loading KittenTTS model from {model_path} and voices from {voices_path}")
-        self.kitten_tts = KittenTTS_1_Onnx(model_path=model_path, voices_path=voices_path)
+        """There is also a supposedly better model called mini:
+        "KittenML/kitten-tts-mini-0.1"
+        It is noticeably slower and I can't really find a big quality gain.
+        """
+        
+        from kittentts import KittenTTS
+        print(f"Loading kittentts with model: {model_path}")
+        self.kitten_tts = KittenTTS(model_path)
         self.voice_for_synthesis = voice
         self.sample_rate = 24000 # default for KittenTTS
         
@@ -39,7 +43,7 @@ class TTS_KittenTTS(TTS):
         samples = self.kitten_tts.generate(text, speed=speaking_rate, voice=self.voice_for_synthesis)
         sample_rate = self.sample_rate
         if sample_rate != target_sr:
-            print('resampling from', sample_rate, 'to', target_sr)
+            # print('resampling from', sample_rate, 'to', target_sr)
             samples = librosa.resample(samples, orig_sr=sample_rate, target_sr=target_sr)
             sample_rate = target_sr
         if return_as_int16:
@@ -50,10 +54,10 @@ class TTS_KittenTTS(TTS):
 class TTS_Piper(TTS):
     def __init__(self, model_path: str='models/piper/en_US-lessac-low.onnx'):
         super().__init__()
-        import piper
+        from piper.voice import PiperVoice
 
         self.model_path = model_path
-        self.piper_voice = piper.voice.PiperVoice.load(model_path)
+        self.piper_voice = PiperVoice.load(model_path)
         self.sampling_rate = self.piper_voice.config.sample_rate      
 
         self.warmup()
@@ -63,34 +67,39 @@ class TTS_Piper(TTS):
         return self.sampling_rate
 
     def synthesize(self, text: str, target_sr=16000, speaking_rate=1.0, return_as_int16=False):
-        synthesis_args = {
-            "length_scale": 1.0 / speaking_rate,  # Higher values = slower speech
-            # "noise_scale": noise_scale,   # Controls variability in voice
-            # "noise_w": noise_w            # Controls phoneme width variation
-        }
-
-
-        it = self.piper_voice.synthesize_stream_raw(text, **synthesis_args)
-        # 16 bit audio bytes
-        audio_bytes = b''.join(it)
-
-        # convert to float32 in [-1, 1] range
-        audio_np = np.frombuffer(audio_bytes, dtype=np.int16)
-
-        if return_as_int16 and self.sampling_rate == target_sr:
-            return audio_np, self.sampling_rate
-        else:
-            samples = audio_np.astype(np.float32) / 32767.0
-
-            # possibly resample to 16kHz
-            if self.sampling_rate != target_sr:
-                print('resampling from', self.sampling_rate, 'to', target_sr)
-                samples = librosa.resample(samples, orig_sr=self.sampling_rate, target_sr=target_sr)
+            # Create synthesis configuration
+            from piper.voice import SynthesisConfig
+            synthesis_config = SynthesisConfig(
+                length_scale=1.0 / speaking_rate,  # Higher values = slower speech
+                # You can add other parameters here like:
+                # noise_scale=0.667,   # Controls variability in voice
+                # noise_w=0.8          # Controls phoneme width variation
+            )
             
-            if return_as_int16:
-                samples = (samples * 32767).astype(np.int16)
-
-            return samples, target_sr
+            # Generate audio chunks - this is now the new API
+            audio_chunks = list(self.piper_voice.synthesize(text, synthesis_config))
+            
+            # Combine all audio data from chunks
+            audio_bytes = b''.join(chunk.audio_int16_bytes for chunk in audio_chunks)
+            
+            # Convert to numpy array
+            audio_np = np.frombuffer(audio_bytes, dtype=np.int16)
+            
+            if return_as_int16 and self.sampling_rate == target_sr:
+                return audio_np, self.sampling_rate
+            else:
+                # Convert to float32 in [-1, 1] range
+                samples = audio_np.astype(np.float32) / 32767.0
+                
+                # Resample if needed
+                if self.sampling_rate != target_sr:
+                    # print(f'Resampling from {self.sampling_rate} to {target_sr}')
+                    samples = librosa.resample(samples, orig_sr=self.sampling_rate, target_sr=target_sr)
+                
+                if return_as_int16:
+                    samples = (samples * 32767).astype(np.int16)
+                
+                return samples, target_sr
 
 
 class TTS_Kokoro(TTS):
@@ -127,7 +136,7 @@ class TTS_Kokoro(TTS):
             phonemes, voice=self.voice, speed=speaking_rate, is_phonemes=True
         )        
         if sample_rate != target_sr:
-            print('resampling from', sample_rate, 'to', target_sr)
+            # print('resampling from', sample_rate, 'to', target_sr)
             samples = librosa.resample(samples, orig_sr=sample_rate, target_sr=target_sr)
             sample_rate = target_sr
         if return_as_int16:
