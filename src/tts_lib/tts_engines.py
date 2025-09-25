@@ -14,8 +14,7 @@ class TTS:
 
     def warmup(self):
         print("Warming up model...")
-        for i in range(0,3):
-            self.synthesize("This is a warmup text to initialize the TTS engine. Cats are great, I love cats!")
+        self.synthesize("This is a warmup text to initialize the TTS engine. Cats are great, I love cats!")
 
 class TTS_KittenTTS(TTS):
     def __init__(self, model_path: str='KittenML/kitten-tts-nano-0.2',
