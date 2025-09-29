@@ -7,5 +7,5 @@ numpy
 kokoro-onnx
 onnxruntime
 piper-tts
-# for kittentts (this is preferred over pip install kittentts)
-kittentts @ https://github.com/KittenML/KittenTTS/releases/download/0.1/kittentts-0.1.0-py3-none-any.whl
+## for kittentts (this is preferred over pip install kittentts)
+#kittentts @ https://github.com/KittenML/KittenTTS/releases/download/0.1/kittentts-0.1.0-py3-none-any.whl
