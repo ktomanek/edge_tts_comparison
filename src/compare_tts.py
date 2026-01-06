@@ -7,27 +7,39 @@ import soundfile as sf
 # import os
 # os.environ['PHONEMIZER_ESPEAK_LIBRARY']="/opt/homebrew/Cellar/espeak-ng/1.52.0/lib/libespeak-ng.1.dylib"
 
+run_warmup = False
 
 # text = 'In a dramatic overnight operation, India said it launched missile and air strikes on nine sites across Pakistan.'
 text = "The quick brown fox jumps over the lazy dog. Dr Smith asked whether it's 4:30 PM today."
 target_sr = 16000
 
 print(f"Running Kitten TTS...")
-kitten_tts = tts_engines.TTS_KittenTTS()
+t1 = time.time()
+kitten_tts = tts_engines.TTS_KittenTTS(warmup=run_warmup)
+print('>> kittentts model load and warmup time:', time.time()-t1)
+
 t1 = time.time()
 audio, sampling_rate = kitten_tts.synthesize(text, target_sr=target_sr)
 print('>> kittentts synthesis time:', time.time()-t1)
 sf.write('kitten_tts.wav', audio, target_sr)
 
 print(f"Running Piper TTS...")
-piper_tts = tts_engines.TTS_Piper()
+
+
+t1 = time.time()
+piper_tts = tts_engines.TTS_Piper(warmup=run_warmup)
+print('>> piper model load and warmup time:', time.time()-t1)
+
 t1 = time.time()
 audio_float32, sampling_rate = piper_tts.synthesize(text, target_sr)
 print('>> piper synthesis time:', time.time()-t1)
 sf.write('piper_tts.wav', audio_float32, target_sr)
 
 print(f"Running Kokoro TTS...")
-kokoro_model = tts_engines.TTS_Kokoro()
+t1 = time.time()
+kokoro_model = tts_engines.TTS_Kokoro(warmup=run_warmup)
+print('>> kokoro model load and warmup time:', time.time()-t1)
+
 t1 = time.time()
 audio_float32, sampling_rate = kokoro_model.synthesize(text, target_sr)
 print('>> kokoro synthesis time:', time.time()-t1)

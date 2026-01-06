@@ -3,7 +3,7 @@ import numpy as np
 import librosa
 
 class TTS:
-    def __init__(self):
+    def __init__(self, warmup: bool=True):
         pass
 
     def get_sample_rate(self):
@@ -18,7 +18,8 @@ class TTS:
 
 class TTS_KittenTTS(TTS):
     def __init__(self, model_path: str='KittenML/kitten-tts-nano-0.2',
-                 voice: str='expr-voice-2-m'):
+                 voice: str='expr-voice-2-m',
+                 warmup: bool=True):
         """There is also a supposedly better model called mini:
         "KittenML/kitten-tts-mini-0.1"
         It is noticeably slower and I can't really find a big quality gain.
@@ -30,8 +31,11 @@ class TTS_KittenTTS(TTS):
         self.voice_for_synthesis = voice
         self.sample_rate = 24000 # default for KittenTTS
         
-        self.warmup()
-        print("KittenTTS loaded and warmed up.")
+        if warmup:
+            self.warmup()
+            print("KittenTTS loaded and warmed up.")
+        else:
+            print("KittenTTS loaded (no warmup).")
 
 
     def get_sample_rate(self):
@@ -51,7 +55,7 @@ class TTS_KittenTTS(TTS):
         return samples, sample_rate        
 
 class TTS_Piper(TTS):
-    def __init__(self, model_path: str='models/piper/en_US-lessac-low.onnx'):
+    def __init__(self, model_path: str='models/piper/en_US-lessac-low.onnx', warmup: bool=True):
         super().__init__()
         from piper.voice import PiperVoice
 
@@ -59,8 +63,11 @@ class TTS_Piper(TTS):
         self.piper_voice = PiperVoice.load(model_path)
         self.sampling_rate = self.piper_voice.config.sample_rate      
 
-        self.warmup()
-        print("PiperTTS loaded and warmed up.")
+        if warmup:
+            self.warmup()
+            print("PiperTTS loaded and warmed up.")
+        else:
+            print("PiperTTS loaded (no warmup).")
 
     def get_sample_rate(self):
         return self.sampling_rate
@@ -107,7 +114,8 @@ class TTS_Kokoro(TTS):
                  model_path: str='models/kokoro/kokoro-v1.0.fp16.onnx', 
                  voice_path: str='models/kokoro/kokoro-voices-v1.0.bin',  
                  speaker_voice: str='am_eric',
-                 language: str="en-us"):
+                 language: str="en-us",
+                 warmup: bool=True):
         super().__init__()
         from kokoro_onnx import Kokoro
         from kokoro_onnx.tokenizer import Tokenizer
@@ -122,8 +130,11 @@ class TTS_Kokoro(TTS):
         self.voice = self.kokoro.get_voice_style(speaker_voice)
         self.sample_rate = 24000 # default for Kokoro
 
-        self.warmup()
-        print("KokoroTTS loaded and warmed up.")
+        if warmup:
+            self.warmup()
+            print("KokoroTTS loaded and warmed up.")
+        else:
+            print("KokoroTTS loaded (no warmup).")
 
 
     def get_sample_rate(self):
