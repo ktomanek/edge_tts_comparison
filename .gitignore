@@ -11,4 +11,6 @@ TODO.md
 *.wav
 *egg*
 models
-TODO.md
+TODOs.md
+comparisons.md
+demo*.py

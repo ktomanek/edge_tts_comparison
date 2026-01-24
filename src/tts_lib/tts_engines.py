@@ -12,6 +12,12 @@ class TTS:
     def synthesize(self, text: str, speaking_rate:float, return_as_int16: bool):
         raise NotImplementedError("This method should be overridden by subclasses.")
 
+    def synthesize_stream(self, text: str, target_sr=16000, speaking_rate=1.0, return_as_int16=False):
+        """Stream audio synthesis in chunks. Yields (audio_chunk, sample_rate) tuples.
+        Only supported by engines with native streaming capabilities.
+        """
+        raise NotImplementedError("Streaming is not supported by this TTS engine.")
+
     def warmup(self):
         print("Warming up model...")
         self.synthesize("This is a warmup text to initialize the TTS engine. Cats are great, I love cats!")
@@ -111,8 +117,8 @@ class TTS_Piper(TTS):
 class TTS_Kokoro(TTS):
 
     def __init__(self,
-                 model_path: str='models/kokoro/kokoro-v1.0.fp16.onnx', 
-                 voice_path: str='models/kokoro/kokoro-voices-v1.0.bin',  
+                 model_path: str='models/kokoro/kokoro-v1.0.fp16.onnx',
+                 voice_path: str='models/kokoro/kokoro-voices-v1.0.bin',
                  speaker_voice: str='am_eric',
                  language: str="en-us",
                  warmup: bool=True):
@@ -144,7 +150,7 @@ class TTS_Kokoro(TTS):
         phonemes = self.tokenizer.phonemize(text, lang=self.language)
         samples, sample_rate = self.kokoro.create(
             phonemes, voice=self.voice, speed=speaking_rate, is_phonemes=True
-        )        
+        )
         if sample_rate != target_sr:
             # print('resampling from', sample_rate, 'to', target_sr)
             samples = librosa.resample(samples, orig_sr=sample_rate, target_sr=target_sr)
@@ -153,3 +159,69 @@ class TTS_Kokoro(TTS):
             samples = (samples * 32767).astype(np.int16)
 
         return samples, sample_rate
+
+class TTS_PocketTTS(TTS):
+    """100m param TTS model from Kyutai that can run on CPU in real-time.
+    Supports streaming as well as voice cloning from a short audio prompt.
+    """
+    def __init__(self, voice: str='alba', warmup: bool=True):
+        """Initialize PocketTTS with a voice.
+        Available voices: alba, marius, javert, jean, fantine, cosette, eponine, azelma
+        Can also provide a path to a wav file for voice cloning.
+        """
+        super().__init__()
+        from pocket_tts import TTSModel
+
+        print(f"Loading PocketTTS with voice: {voice}")
+        self.tts_model = TTSModel.load_model()
+        self.voice_state = self.tts_model.get_state_for_audio_prompt(voice)
+        self.sample_rate = self.tts_model.sample_rate
+
+        if warmup:
+            self.warmup()
+            print("PocketTTS loaded and warmed up.")
+        else:
+            print("PocketTTS loaded (no warmup).")
+
+    def get_sample_rate(self):
+        return self.sample_rate
+
+    def synthesize(self, text: str, target_sr=16000, speaking_rate=1.0, return_as_int16=False):
+        audio_tensor = self.tts_model.generate_audio(self.voice_state, text)
+
+        samples = audio_tensor.numpy()
+        sample_rate = self.sample_rate
+
+        if sample_rate != target_sr:
+            samples = librosa.resample(samples, orig_sr=sample_rate, target_sr=target_sr)
+            sample_rate = target_sr
+
+        if return_as_int16:
+            samples = (samples * 32767).astype(np.int16)
+
+        return samples, sample_rate
+
+    def synthesize_stream(self, text: str, target_sr=16000, speaking_rate=1.0, return_as_int16=False):
+        """Stream audio synthesis in chunks. Yields (audio_chunk, sample_rate) tuples.
+
+        Args:
+            text: Text to synthesize
+            target_sr: Target sample rate (default: 16000)
+            speaking_rate: Speaking rate (not supported by PocketTTS, parameter ignored)
+            return_as_int16: If True, return int16 audio, otherwise float32
+
+        Yields:
+            Tuple of (audio_chunk, sample_rate) where audio_chunk is a numpy array
+        """
+        for chunk_tensor in self.tts_model.generate_audio_stream(self.voice_state, text):
+            chunk = chunk_tensor.numpy()
+            sample_rate = self.sample_rate
+
+            if sample_rate != target_sr:
+                chunk = librosa.resample(chunk, orig_sr=sample_rate, target_sr=target_sr)
+                sample_rate = target_sr
+
+            if return_as_int16:
+                chunk = (chunk * 32767).astype(np.int16)
+
+            yield chunk, sample_rate

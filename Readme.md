@@ -16,6 +16,14 @@ Compare different small TTS models running on edge devices.
     * kokoro: ```sh download_kokoro_models.sh``` (see different models in the script)
     * piper: ```sh download_piper_models.sh``` (many other voices are available!)
 
+## Optional TTS models
+
+The dependencies for the following models aren't installed directly, to avoid extensive dependencies (eg, pytorch). To use, please install `pip install -r requirements_optional.txt`.
+
+* Kitten-TTS
+* Pocket-TTS (https://github.com/kyutai-labs/pocket-tts)
+
+
 # Performance
 
 
