@@ -239,10 +239,9 @@ class TTS_PocketTTSOnnx(TTS):
         from .pocket_tts_onnx import PocketTTSOnnx
         from pathlib import Path
 
-        # Use ONNX models from models/pockettts_onnx, tokenizer from src/tts_lib/
-        module_dir = Path(__file__).parent
+        # Use ONNX models and tokenizer from models/pockettts_onnx
         models_dir = Path(__file__).parent.parent.parent / "models" / "pockettts_onnx"
-        tokenizer_path = module_dir / "tokenizer.model"
+        tokenizer_path = models_dir / "tokenizer.model"
 
         print(f"Models directory: {models_dir}")
         tts_model = PocketTTSOnnx(
