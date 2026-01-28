@@ -15,70 +15,51 @@ Compare different small TTS models running on edge devices.
 * download models:
     * kokoro: ```sh download_kokoro_models.sh``` (see different models in the script)
     * piper: ```sh download_piper_models.sh``` (many other voices are available!)
+    * pocket-tts-onnx: ```sh download_pocket_tts.sh``` (onnx models)
+
+## Included Models
+
+The core installation only includes models with onnx runtime, to keep dependencies to a minimum.
+
+* Piper TTS
+* Kokoro TTS
+* ONNX-port of Pocket TTS
+    * Note: for pocket-tts-onnx we included the core code from https://huggingface.co/KevinAHM/pocket-tts-onnx and minimally adapted it. Models need to downloaded directly from above repo with the provided script.
 
 ## Optional TTS models
 
 The dependencies for the following models aren't installed directly, to avoid extensive dependencies (eg, pytorch). To use, please install `pip install -r requirements_optional.txt`.
 
-* Kitten-TTS
-* Pocket-TTS (https://github.com/kyutai-labs/pocket-tts)
-
+* [Kitten-TTS](https://github.com/KittenML/KittenTTS)
+* original [Pocket-TTS](https://github.com/kyutai-labs/pocket-tts)
 
 # Performance
-
 
 * for Kokoro, running ```kokoro-v1.0.fp16.onnx```
 * for Piper, running ```en_US-lessac-low.onnx```
 * for Kitten, running ```kitten_tts_nano_v0_1.onnx```
+* for PocketTTS
+* for PocketTTSOnnx
 * text: 
     * ```The quick brown fox jumps over the lazy dog. Dr. Smith asked whether it's 3:30 PM today.```
     * (text chosen to covers key phonetic elements, numbers, punctuation, and common pronunciation challenges in a short test case)
 
 inference time after warmup:
 
-environment | Kokoro | Piper | KittenTTS
+environment | Piper | Kokoro | PocketTTS Onnx | PocketTTS Orig | KittenTTS
 | -- | -- | -- | -- |
-| MacBook Pro M2 | 0.75s | 0.085s| 0.68s
-| Raspberry Pi 5 | 4.83s| 0.54s| 4.13s 
+| Raspberry Pi 5 |  0.54s | 4.83s | xx | xx | 4.13s 
+| MacBook Pro M2 | 0.085s | 0.75s | xx | xx | 0.68s
 
 
-# Stream LLM output into TTS
 
-Generate text output via an LLM using Ollama and synthesize speech in streaming-fashing.
-Using Piper, this works in realtime; Kokoro seems too slow for that even on a Mac M2.
-
-For Kokoro, when increasing the speaking speed, first word is often cut off.
-## Installation
-
-* install ollama locally: https://ollama.com/download
-* then pull the model you want ot use, eg: 
-
-```ollama pull gemma3:1b```
-
-* then install [ollama python library](https://github.com/ollama/ollama-python) 
-
-```pip install ollama```
-
-* other dependencies
-
-* ```pip install sounddevice nltk```
-* download sentence splitter: ```python -c "import nltk; nltk.download('punkt_tab')```
-
-## Run
-
-```
-python stream_llm_to_tts.py \
-    --ollama-model-name=gemma3:1b \
-    --tts_engine piper  \
-    --speaking-rate=2.0 \
-    --prompt "Explain to me what a cat does all day. Use exactly 3 sentences."
-```
+# Licence
 
 
-```
-python stream_llm_to_tts.py \
-    --ollama-model-name=gemma3:1b \
-    --tts_engine kokoro  \
-    --speaking-rate=1.0 \
-    --prompt "Explain to me what a cat does all day. Use exactly 3 sentences."
-```
+## Pocket-TTS-Onnx
+
+
+- **Models**: CC BY 4.0 (inherited from [kyutai/pocket-tts](https://huggingface.co/kyutai/pocket-tts))
+- **Code**: Apache 2.0
+
+See details (also for prohibited use): https://huggingface.co/KevinAHM/pocket-tts-onnx/blob/main/README.md

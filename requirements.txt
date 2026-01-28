@@ -7,3 +7,5 @@ numpy
 kokoro-onnx
 onnxruntime
 piper-tts
+sentencepiece
+scipy

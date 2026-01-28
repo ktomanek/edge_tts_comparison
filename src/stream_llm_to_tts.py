@@ -1,11 +1,34 @@
-# prompt LLM and pipe generated output directly into Piper
-#
-# * uses ollama for LLM
-# * synthesizes only full sentences for better audio quality (collected streamed output from LLM until full sentence is found)
-#
-# Example run
-#
-# python stream_llm_to_tts.py --piper-model en_US-lessac-low.onnx --prompt "Explain to me what a cat does all day. Use exactly 3 sentences."  --speaking-rate=5.0
+# Generate text output via an LLM using Ollama and synthesize speech in streaming-fashing.
+# Using Piper, this works in realtime; Kokoro seems too slow for that even on a Mac M2.
+
+# For Kokoro, when increasing the speaking speed, first word is often cut off.
+# ## Installation
+
+# * install ollama locally: https://ollama.com/download
+# * then pull the model you want ot use, eg: 
+# ```ollama pull gemma3:1b```
+# * then install [ollama python library](https://github.com/ollama/ollama-python) 
+# ```pip install ollama```
+# * other dependencies
+# * ```pip install sounddevice nltk```
+# * download sentence splitter: ```python -c "import nltk; nltk.download('punkt_tab')```
+# ## Run
+# ```
+# python stream_llm_to_tts.py \
+#     --ollama-model-name=gemma3:1b \
+#     --tts_engine piper  \
+#     --speaking-rate=2.0 \
+#     --prompt "Explain to me what a cat does all day. Use exactly 3 sentences."
+# ```
+# ```
+# python stream_llm_to_tts.py \
+#     --ollama-model-name=gemma3:1b \
+#     --tts_engine kokoro  \
+#     --speaking-rate=1.0 \
+#     --prompt "Explain to me what a cat does all day. Use exactly 3 sentences."
+# ```
+
+
 
 import json
 import ollama

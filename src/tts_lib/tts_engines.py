@@ -1,6 +1,8 @@
 # convenvience wrapper for several TTS libraries running on edge devices
 import numpy as np
 import librosa
+import os
+import time
 
 class TTS:
     def __init__(self, warmup: bool=True):
@@ -225,3 +227,149 @@ class TTS_PocketTTS(TTS):
                 chunk = (chunk * 32767).astype(np.int16)
 
             yield chunk, sample_rate
+
+class TTS_PocketTTSOnnx(TTS):
+    """ONNX version of PocketTTS - 100m param TTS model from Kyutai.
+    Uses ONNX Runtime instead of PyTorch for significantly reduced overhead.
+    Ideal for edge devices like Raspberry Pi.
+    Supports streaming and voice cloning from a short audio prompt.
+    """
+
+    def _get_tts_model_instance(temperature: float=0.3, lsd_steps: int=10):
+        from .pocket_tts_onnx import PocketTTSOnnx
+        from pathlib import Path
+
+        # Use ONNX models from models/pockettts_onnx, tokenizer from src/tts_lib/
+        module_dir = Path(__file__).parent
+        models_dir = Path(__file__).parent.parent.parent / "models" / "pockettts_onnx"
+        tokenizer_path = module_dir / "tokenizer.model"
+
+        print(f"Models directory: {models_dir}")
+        tts_model = PocketTTSOnnx(
+            models_dir=str(models_dir),
+            tokenizer_path=str(tokenizer_path),
+            temperature=temperature,
+            lsd_steps=lsd_steps
+        )
+        return tts_model
+
+
+    def __init__(self, voice='alba', temperature: float=0.3, lsd_steps: int=10, warmup: bool=True):
+        """Initialize PocketTTS ONNX with a voice.
+
+        Args:
+            voice: Can be:
+                   - Path to a wav file for voice cloning (e.g., 'my_voice.wav')
+                   - Pre-loaded embeddings from load_voice_embeddings() (numpy array)
+            temperature: Generation diversity (0.3=deterministic/default, 0.7=balanced, 1.0=expressive)
+            lsd_steps: Quality/speed tradeoff (1=faster/lower quality, 10=default)
+            warmup: Whether to run warmup synthesis
+        """
+        super().__init__()
+        self.tts_model = TTS_PocketTTSOnnx._get_tts_model_instance(temperature=temperature, lsd_steps=lsd_steps)
+        self.sample_rate = 24000  # Default for PocketTTS
+
+        # Pre-encode voice during initialization
+        if isinstance(voice, np.ndarray):
+            print(f">> Using PocketTTS ONNX with pre-loaded voice embeddings")
+            self.voice_embeddings = voice
+        else:
+            print(f">> Using PocketTTS ONNX with reference voice audio file from: {voice}")
+            voice_str = str(voice)
+            if not os.path.exists(voice_str):
+                raise FileNotFoundError(f"Voice reference audio file not found: {voice_str}")
+
+            print(f"> Encoding voice audio...")
+            t1 = time.time()
+            self.voice_embeddings = self.tts_model._get_voice_embeddings(voice)
+            print(f"> Voice encoded in: {time.time() - t1:.2f} seconds")
+
+        if warmup:
+            self.warmup()
+            print("PocketTTS ONNX loaded and warmed up.")
+        else:
+            print("PocketTTS ONNX loaded (no warmup).")
+
+    def get_sample_rate(self):
+        return self.sample_rate
+
+    def synthesize(self, text: str, target_sr=16000, speaking_rate=1.0, return_as_int16=False):
+        """Synthesize audio from text.
+
+        Note: speaking_rate is not supported by PocketTTS ONNX and will be ignored.
+        """
+        audio = self.tts_model.generate(text, voice=self.voice_embeddings)
+
+        samples = audio  # Already a numpy array
+        sample_rate = self.sample_rate
+
+        if sample_rate != target_sr:
+            samples = librosa.resample(samples, orig_sr=sample_rate, target_sr=target_sr)
+            sample_rate = target_sr
+
+        if return_as_int16:
+            samples = (samples * 32767).astype(np.int16)
+
+        return samples, sample_rate
+
+    def synthesize_stream(self, text: str, target_sr=16000, speaking_rate=1.0, return_as_int16=False):
+        """Stream audio synthesis in chunks. Yields (audio_chunk, sample_rate) tuples.
+
+        Args:
+            text: Text to synthesize
+            target_sr: Target sample rate (default: 16000)
+            speaking_rate: Speaking rate (not supported by PocketTTS ONNX, parameter ignored)
+            return_as_int16: If True, return int16 audio, otherwise float32
+
+        Yields:
+            Tuple of (audio_chunk, sample_rate) where audio_chunk is a numpy array
+        """
+        for chunk in self.tts_model.stream(text, voice=self.voice_embeddings):
+            sample_rate = self.sample_rate
+
+            if sample_rate != target_sr:
+                chunk = librosa.resample(chunk, orig_sr=sample_rate, target_sr=target_sr)
+                sample_rate = target_sr
+
+            if return_as_int16:
+                chunk = (chunk * 32767).astype(np.int16)
+
+            yield chunk, sample_rate
+
+    def export_voice_embeddings(audio_path: str, output_path: str):
+        """Export voice embeddings from an audio file for faster loading later.
+
+        Args:
+            audio_path: Path to the audio file to encode (wav, mp3, etc.)
+            output_path: Path where to save the embeddings (.npy file)
+
+        Example:
+            tts = TTS_PocketTTSOnnx()
+            tts.export_voice_embeddings('my_voice.wav', 'my_voice_embeddings.npy')
+        """
+        tts_model = TTS_PocketTTSOnnx._get_tts_model_instance()
+        embeddings = tts_model.encode_voice(audio_path)
+        np.save(output_path, embeddings)
+        print(f"✓ Voice embeddings exported to: {output_path}")
+        print(f"  Shape: {embeddings.shape}, Size: {embeddings.nbytes / 1024:.1f} KB")
+
+    @staticmethod
+    def load_voice_embeddings(embeddings_path: str):
+        """Load pre-computed voice embeddings from a file.
+
+        Args:
+            embeddings_path: Path to the .npy embeddings file
+
+        Returns:
+            Numpy array of embeddings that can be passed as 'voice' parameter
+
+        Example:
+            embeddings = TTS_PocketTTSOnnx.load_voice_embeddings('my_voice_embeddings.npy')
+            tts = TTS_PocketTTSOnnx(voice=embeddings)
+            # Or use directly in synthesis:
+            audio, sr = tts.synthesize("Hello", target_sr=16000)
+        """
+        embeddings = np.load(embeddings_path)
+        print(f"✓ Voice embeddings loaded from: {embeddings_path}")
+        print(f"  Shape: {embeddings.shape}, Size: {embeddings.nbytes / 1024:.1f} KB")
+        return embeddings
