@@ -3,12 +3,6 @@ import time
 import soundfile as sf
 import statistics
 
-# Configure ONNX Runtime for optimal performance
-# Set to 0 to auto-detect, or specify thread count (e.g., 8 for Orange Pi 5)
-num_threads = tts_engines.set_onnx_threading(0)  # Auto-detect and use all available cores
-print(f"=== ONNX Runtime configured to use {num_threads} threads ===")
-print()
-
 # # not needed it espeak is found, but if you encounter problems, consider setting the path
 # # this might be different on your system (see Readme for installation instructions)
 # import os
@@ -57,14 +51,14 @@ target_sr = 16000
 
 # Reference text for voice cloning
 ref_text = text
+num_inf_runs = 10
 
 
 print(f">>> Running Piper TTS...")
-
 t1 = time.time()
 piper_tts = tts_engines.TTS_Piper(warmup=run_warmup)
 print(f'>> piper model load and warmup time: {time.time()-t1:.2f}')
-audio_float32, sampling_rate = benchmark_synthesis(piper_tts, text, target_sr)
+audio_float32, sampling_rate = benchmark_synthesis(piper_tts, text, target_sr, num_runs=num_inf_runs)
 sf.write('piper_tts.wav', audio_float32, target_sr)
 
 
@@ -72,35 +66,13 @@ print(f">>> Running Kokoro TTS...")
 t1 = time.time()
 kokoro_model = tts_engines.TTS_Kokoro(warmup=run_warmup)
 print(f'>> kokoro model load and warmup time: {time.time()-t1:.2f}')
-audio_float32, sampling_rate = benchmark_synthesis(kokoro_model, text, target_sr)
+audio_float32, sampling_rate = benchmark_synthesis(kokoro_model, text, target_sr, num_runs=num_inf_runs)
 sf.write('kokoro_tts.wav', audio_float32, target_sr)
 
 print(f">>> Running PocketTTS ONNX...")
 t1 = time.time()
 ref_audio = 'kokoro_tts.wav'
 pocket_tts_onnx = tts_engines.TTS_PocketTTSOnnx(voice=ref_audio, warmup=run_warmup)
-#emb_path = 'pocket_tts_onnx_voice_emb.npy'
-# tts_engines.TTS_PocketTTSOnnx.export_voice_embeddings(ref_audio, emb_path)
-#emb = tts_engines.TTS_PocketTTSOnnx.load_voice_embeddings(emb_path)
-#pocket_tts_onnx = tts_engines.TTS_PocketTTSOnnx(voice=emb, warmup=run_warmup)
 print(f'>> pockettts onnx model load and warmup time: {time.time()-t1:.2f}')
-audio, sampling_rate = benchmark_synthesis(pocket_tts_onnx, text, target_sr)
+audio, sampling_rate = benchmark_synthesis(pocket_tts_onnx, text, target_sr, num_runs=num_inf_runs)
 sf.write('pocket_tts_onnx.wav', audio, target_sr)
-
-
-## Optional models
-
-# print(f">>> Running PocketTTS...")
-# t1 = time.time()
-# pocket_tts = tts_engines.TTS_PocketTTS(warmup=run_warmup)
-# print(f'>> pockettts model load and warmup time: {time.time()-t1:.2f}')
-# audio, sampling_rate = benchmark_synthesis(pocket_tts, text, target_sr)
-# sf.write('pocket_tts.wav', audio, target_sr)
-
-
-# print(f">>> Running Kitten TTS...")
-# t1 = time.time()
-# kitten_tts = tts_engines.TTS_KittenTTS(warmup=run_warmup)
-# print(f'>> kittentts model load and warmup time: {time.time()-t1:.2f}')
-# audio, sampling_rate = benchmark_synthesis(kitten_tts, text, target_sr)
-# sf.write('kitten_tts.wav', audio, target_sr)

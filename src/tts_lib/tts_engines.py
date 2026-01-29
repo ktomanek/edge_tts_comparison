@@ -4,39 +4,6 @@ import librosa
 import os
 import time
 
-def set_onnx_threading(num_threads: int = 0):
-    """Set optimal ONNX Runtime threading environment variables.
-
-    This affects Piper and Kokoro TTS engines which use external libraries
-    with ONNX Runtime. For PocketTTS ONNX, use the num_threads parameter
-    directly in the constructor instead.
-
-    Args:
-        num_threads: Number of threads to use (0=auto-detect all cores, default)
-
-    Returns:
-        Number of threads configured
-
-    Example:
-        # For optimal performance on Orange Pi 5 or similar ARM devices:
-        set_onnx_threading(8)  # Use all 8 cores
-
-        # Or let it auto-detect:
-        set_onnx_threading()
-    """
-    if num_threads <= 0:
-        import multiprocessing
-        num_threads = multiprocessing.cpu_count()
-
-    # Set environment variables that ONNX Runtime respects
-    os.environ['OMP_NUM_THREADS'] = str(num_threads)
-    os.environ['ONNX_NUM_THREADS'] = str(num_threads)
-
-    # Optional: Set to active waiting for lower latency (higher CPU usage)
-    # os.environ['OMP_WAIT_POLICY'] = 'ACTIVE'
-
-    return num_threads
-
 class TTS:
     def __init__(self, warmup: bool=True):
         pass
@@ -274,7 +241,7 @@ class TTS_PocketTTSOnnx(TTS):
     Supports streaming and voice cloning from a short audio prompt.
     """
 
-    def _get_tts_model_instance(temperature: float=0.3, lsd_steps: int=10, num_threads: int=0):
+    def _get_tts_model_instance(temperature: float=0.3, lsd_steps: int=10):
         from .pocket_tts_onnx import PocketTTSOnnx
         from pathlib import Path
 
@@ -287,13 +254,12 @@ class TTS_PocketTTSOnnx(TTS):
             models_dir=str(models_dir),
             tokenizer_path=str(tokenizer_path),
             temperature=temperature,
-            lsd_steps=lsd_steps,
-            num_threads=num_threads
+            lsd_steps=lsd_steps
         )
         return tts_model
 
 
-    def __init__(self, voice='alba', temperature: float=0.3, lsd_steps: int=10, num_threads: int=0, warmup: bool=True):
+    def __init__(self, voice='alba', temperature: float=0.3, lsd_steps: int=10, warmup: bool=True):
         """Initialize PocketTTS ONNX with a voice.
 
         Args:
@@ -302,14 +268,12 @@ class TTS_PocketTTSOnnx(TTS):
                    - Pre-loaded embeddings from load_voice_embeddings() (numpy array)
             temperature: Generation diversity (0.3=deterministic/default, 0.7=balanced, 1.0=expressive)
             lsd_steps: Quality/speed tradeoff (1=faster/lower quality, 10=default)
-            num_threads: Number of threads for ONNX Runtime (0=auto-detect all cores, default)
             warmup: Whether to run warmup synthesis
         """
         super().__init__()
         self.tts_model = TTS_PocketTTSOnnx._get_tts_model_instance(
             temperature=temperature,
-            lsd_steps=lsd_steps,
-            num_threads=num_threads
+            lsd_steps=lsd_steps
         )
         self.sample_rate = 24000  # Default for PocketTTS
 
@@ -380,19 +344,18 @@ class TTS_PocketTTSOnnx(TTS):
 
             yield chunk, sample_rate
 
-    def export_voice_embeddings(audio_path: str, output_path: str, num_threads: int=0):
+    def export_voice_embeddings(audio_path: str, output_path: str):
         """Export voice embeddings from an audio file for faster loading later.
 
         Args:
             audio_path: Path to the audio file to encode (wav, mp3, etc.)
             output_path: Path where to save the embeddings (.npy file)
-            num_threads: Number of threads for ONNX Runtime (0=auto-detect, default)
 
         Example:
             tts = TTS_PocketTTSOnnx()
             tts.export_voice_embeddings('my_voice.wav', 'my_voice_embeddings.npy')
         """
-        tts_model = TTS_PocketTTSOnnx._get_tts_model_instance(num_threads=num_threads)
+        tts_model = TTS_PocketTTSOnnx._get_tts_model_instance()
         embeddings = tts_model.encode_voice(audio_path)
         np.save(output_path, embeddings)
         print(f"✓ Voice embeddings exported to: {output_path}")

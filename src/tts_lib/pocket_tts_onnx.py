@@ -60,7 +60,6 @@ class PocketTTSOnnx:
         device: str = "auto",
         temperature: float = 0.7,
         lsd_steps: int = 10,
-        num_threads: int = 0,  # 0 = auto-detect
     ):
         self.models_dir = Path(models_dir)
 
@@ -70,13 +69,9 @@ class PocketTTSOnnx:
         self.precision = precision
         self.temperature = temperature
         self.lsd_steps = lsd_steps
-        self.num_threads = num_threads
 
         # Setup execution providers
         self.providers = self._get_providers(device)
-
-        # Setup session options for optimal performance
-        self.session_options = self._create_session_options()
 
         # Load tokenizer
         self.tokenizer = spm.SentencePieceProcessor()
@@ -103,28 +98,6 @@ class PocketTTSOnnx:
                 return ["CUDAExecutionProvider", "CPUExecutionProvider"]
             return ["CPUExecutionProvider"]
 
-    def _create_session_options(self) -> ort.SessionOptions:
-        """Create optimized ONNX Runtime session options.
-
-        Returns:
-            SessionOptions configured for optimal performance
-        """
-        sess_options = ort.SessionOptions()
-
-        # Set thread count (0 = auto-detect, otherwise use specified value)
-        if self.num_threads > 0:
-            sess_options.intra_op_num_threads = self.num_threads
-        else:
-            # Auto-detect: use all available cores
-            import multiprocessing
-            num_cores = multiprocessing.cpu_count()
-            sess_options.intra_op_num_threads = num_cores
-
-        # Enable all graph optimizations
-        sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-
-        return sess_options
-
     def _load_models(self):
         """Load ONNX models (dual model architecture)."""
         # Select model files based on precision
@@ -135,28 +108,23 @@ class PocketTTSOnnx:
 
         self.mimi_encoder = ort.InferenceSession(
             str(self.models_dir / "mimi_encoder.onnx"),
-            sess_options=self.session_options,
             providers=self.providers
         )
         self.text_conditioner = ort.InferenceSession(
             str(self.models_dir / "text_conditioner.onnx"),
-            sess_options=self.session_options,
             providers=self.providers
         )
         # Dual model split: main (transformer) + flow (flow network)
         self.flow_lm_main = ort.InferenceSession(
             str(self.models_dir / flow_main_file),
-            sess_options=self.session_options,
             providers=self.providers
         )
         self.flow_lm_flow = ort.InferenceSession(
             str(self.models_dir / flow_flow_file),
-            sess_options=self.session_options,
             providers=self.providers
         )
         self.mimi_decoder = ort.InferenceSession(
             str(self.models_dir / mimi_file),
-            sess_options=self.session_options,
             providers=self.providers
         )
 
