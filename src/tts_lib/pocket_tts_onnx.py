@@ -114,19 +114,14 @@ class PocketTTSOnnx:
         # Set thread count (0 = auto-detect, otherwise use specified value)
         if self.num_threads > 0:
             sess_options.intra_op_num_threads = self.num_threads
-            sess_options.inter_op_num_threads = 1  # Single model execution, avoid overhead
         else:
             # Auto-detect: use all available cores
             import multiprocessing
             num_cores = multiprocessing.cpu_count()
             sess_options.intra_op_num_threads = num_cores
-            sess_options.inter_op_num_threads = 1
 
         # Enable all graph optimizations
         sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-
-        # Use sequential execution mode (simpler, often faster for single-threaded scenarios)
-        sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
 
         return sess_options
 
