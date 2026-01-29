@@ -50,9 +50,9 @@ Reporting mean ± stdev over 10 runs, inference time after 3x warmup.
 
 environment | platform | Piper | Kokoro | PocketTTS Onnx | 
 | -- | -- | -- | -- | --|
-| Raspberry Pi 5 | CPU  0.54s | 4.83s | xx 
+| Raspberry Pi 5 | CPU  0.54s ± 0.01s | 4.09s ± 0.07s | xx 
+| Orange Pi 5 pro | CPU  0.54s ± 0.01s | 4.09s ± 0.07s | 5.60s ± 0.21s
 | MacBook Pro M2 | CPU | 0.15s ± 0.01s | 1.20s ± 0.02s | 1.25s ± 0.08s 
-| Orange Pi 5 pro | CPU |  xxxs | xxxs | xx 
 
 
 # Licence

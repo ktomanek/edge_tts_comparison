@@ -3,6 +3,12 @@ import time
 import soundfile as sf
 import statistics
 
+# Configure ONNX Runtime for optimal performance
+# Set to 0 to auto-detect, or specify thread count (e.g., 8 for Orange Pi 5)
+num_threads = tts_engines.set_onnx_threading(0)  # Auto-detect and use all available cores
+print(f"=== ONNX Runtime configured to use {num_threads} threads ===")
+print()
+
 # # not needed it espeak is found, but if you encounter problems, consider setting the path
 # # this might be different on your system (see Readme for installation instructions)
 # import os
