@@ -44,13 +44,15 @@ The dependencies for the following models aren't installed directly, to avoid ex
     * ```The quick brown fox jumps over the lazy dog. Dr. Smith asked whether it's 3:30 PM today.```
     * (text chosen to covers key phonetic elements, numbers, punctuation, and common pronunciation challenges in a short test case)
 
-inference time after warmup:
 
-environment | Piper | Kokoro | PocketTTS Onnx | PocketTTS Orig | KittenTTS
-| -- | -- | -- | -- |
-| Raspberry Pi 5 |  0.54s | 4.83s | xx | xx | 4.13s 
-| MacBook Pro M2 | 0.085s | 0.75s | xx | xx | 0.68s
 
+Reporting mean ± stdev over 10 runs, inference time after 3x warmup.
+
+environment | platform | Piper | Kokoro | PocketTTS Onnx | 
+| -- | -- | -- | -- | --|
+| Raspberry Pi 5 | CPU  0.54s | 4.83s | xx 
+| MacBook Pro M2 | CPU | 0.15s ± 0.01s | 1.20s ± 0.02s | 1.25s ± 0.08s 
+| Orange Pi 5 pro | CPU |  xxxs | xxxs | xx 
 
 
 # Licence

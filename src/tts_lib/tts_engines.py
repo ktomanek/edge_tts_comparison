@@ -11,7 +11,7 @@ class TTS:
     def get_sample_rate(self):
         raise NotImplementedError("This method should be overridden by subclasses.")
 
-    def synthesize(self, text: str, speaking_rate:float, return_as_int16: bool):
+    def synthesize(self, text: str, target_sr=16000, speaking_rate=1.0, return_as_int16=False):
         raise NotImplementedError("This method should be overridden by subclasses.")
 
     def synthesize_stream(self, text: str, target_sr=16000, speaking_rate=1.0, return_as_int16=False):
@@ -20,9 +20,15 @@ class TTS:
         """
         raise NotImplementedError("Streaming is not supported by this TTS engine.")
 
-    def warmup(self):
+    def warmup(self, target_sr=16000):
         print("Warming up model...")
-        self.synthesize("This is a warmup text to initialize the TTS engine. Cats are great, I love cats!")
+        for i in range(3):
+            self.synthesize(
+                "This is a warmup text to initialize the TTS engine.",
+                target_sr=target_sr,
+                speaking_rate=1.0,
+                return_as_int16=False
+            )
 
 class TTS_KittenTTS(TTS):
     def __init__(self, model_path: str='KittenML/kitten-tts-nano-0.2',
