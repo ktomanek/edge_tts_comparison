@@ -256,7 +256,7 @@ play_audio_on_first_run = True  # Set to True to hear streaming audio in real-ti
 # Hardware acceleration
 device = "auto"  # "auto" (auto-detect), "cpu", "cuda", "coreml" (Apple M1/M2/M3), or "rknpu" (RK3588 NPU)
 num_threads = 4  # ONNX Runtime threads (set to number of big cores on ARM big.LITTLE, e.g., 4 for Orange Pi 5)
-cpu_affinity = {4,5,6,7}  # CPU core binding: None (no binding), or {4,5,6,7} for A76 cores on Orange Pi 5/RK3588
+cpu_affinity = None  # CPU core binding: None (no binding), eg for RPI, or {4,5,6,7} for A76 cores on Orange Pi 5/RK3588
 
 # Streaming playback configuration
 prebuffer_chunks = 4  # Number of chunks to buffer before starting playback (increase if stuttering)
@@ -291,7 +291,7 @@ ref_audio = 'kokoro_tts.wav'
 pocket_tts_onnx = tts_engines.TTS_PocketTTSOnnx(
     voice=ref_audio,
     warmup=run_warmup,
-    lsd_steps=10,
+    lsd_steps=1,
     device=device,
     num_threads=num_threads,
     cpu_affinity=cpu_affinity

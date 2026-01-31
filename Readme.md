@@ -82,9 +82,11 @@ environment     | platform | LSD steps |  TTFB | TTFA | total time | RTF | audio
 --- | --- | --- | --- | -- | -- | -- | -- |
 | MacBook Pro M2 | CPU  | 10  | 0.080s ± 0.006s | 0.130s ± 0.157s | 1.46s ± 0.09s | 0.21x |6.56s |
 | Raspberry Pi 5 | CPU | 10 |0.311s ± 0.008s | 0.347s ± 0.118s | 8.92s ± 0.42s | 1.28x | 6.96s |
-| Raspberry Pi 5 | CPU | 5 | 0.277s ± 0.002s | 0.308s ± 0.098s  | 7.57s ± 0.14s | 1.15x | 6.56s |
-| Orange Pi 5 pro | CPU | 0.390s ± 0.000s|0.831s ± 0.000s| 12.25s ± 0.00s | 1.76x  | 6.96s|
+| Raspberry Pi 5 | CPU | 1 | 0.277s ± 0.002s | 0.308s ± 0.098s  | 7.57s ± 0.14s | 1.15x | 6.56s |
+| Orange Pi 5 pro all cores| CPU | 10 | 0.270s ± 0.050s | 0.301s ± 0.095s | 7.82s ± 0.24s | 1.14x | 6.88s |
+| Orange Pi 5 pro A76 only | CPU | 1| 0.239s ± 0.059s | 0.267s ± 0.107s | 4.93s ± 0.89s | 0.70x  | 7.04s|
 
+OPI - cpu_affinity = {4, 5, 6, 7} - all A76
 
 # Licence
 

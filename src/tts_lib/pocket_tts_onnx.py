@@ -106,6 +106,7 @@ class PocketTTSOnnx:
         sess_options = ort.SessionOptions()
 
         # Thread configuration for optimal performance on ARM big.LITTLE
+        # Limits thread contention
         sess_options.intra_op_num_threads = self.num_threads  # Threads for single op (use A76 cores)
         sess_options.inter_op_num_threads = 1  # Sequential execution between ops
 
@@ -113,6 +114,7 @@ class PocketTTSOnnx:
         sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
 
         # Execution mode
+        # Sequential rather than parallel op execution - Works better with inter_op=1
         sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
 
         # Memory optimizations (enabled by default, but explicit for clarity)
