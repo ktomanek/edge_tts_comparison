@@ -9,7 +9,7 @@ import sounddevice as sd
 class StreamingAudioPlayer:
     """Plays audio chunks in real-time with continuous buffering."""
 
-    def __init__(self, sample_rate, prebuffer_chunks=4, dynamic_rebuffer=True, rebuffer_threshold_ms=500):
+    def __init__(self, sample_rate, prebuffer_chunks=4):
         self.sample_rate = sample_rate
         self.buffer = np.array([], dtype=np.float32)
         self.buffer_lock = threading.Lock()
@@ -20,10 +20,6 @@ class StreamingAudioPlayer:
         self.chunks_received = 0
         self.playback_start_time = None
         self.underrun_count = 0
-        self.dynamic_rebuffer = dynamic_rebuffer
-        self.rebuffer_threshold_samples = int((rebuffer_threshold_ms / 1000.0) * sample_rate)
-        self.is_rebuffering = False
-        self.rebuffer_count = 0
 
     def audio_callback(self, outdata, frames, time_info, status):
         """Callback function for sounddevice OutputStream."""
@@ -32,21 +28,6 @@ class StreamingAudioPlayer:
 
         with self.buffer_lock:
             buffer_size = len(self.buffer)
-
-            # Check if we should start rebuffering
-            if self.dynamic_rebuffer and not self.finished and not self.is_rebuffering:
-                if buffer_size < self.rebuffer_threshold_samples:
-                    self.is_rebuffering = True
-                    self.rebuffer_count += 1
-
-            # If rebuffering, output silence until buffer fills up
-            # BUT: If finished, stop rebuffering immediately to play out remaining buffer
-            if self.is_rebuffering:
-                if self.finished or buffer_size >= self.rebuffer_threshold_samples * 2:
-                    self.is_rebuffering = False
-                else:
-                    outdata[:] = 0
-                    return
 
             if buffer_size >= frames:
                 # We have enough data
@@ -104,10 +85,6 @@ class StreamingAudioPlayer:
         """Get the number of buffer underruns that occurred during playback."""
         return self.underrun_count
 
-    def get_rebuffer_count(self):
-        """Get the number of times dynamic rebuffering occurred."""
-        return self.rebuffer_count
-
     def stop(self):
         """Stop the audio stream after playing remaining buffered audio."""
         # If we never started (not enough chunks), start now
@@ -149,7 +126,7 @@ class StreamingAudioPlayer:
                 pass  # Stream might already be stopped
             self.stream.close()
 
-def benchmark_streaming(tts_engine, text, target_sr=16000, num_runs=10, play_audio=False, prebuffer_chunks=4, dynamic_rebuffer=True, rebuffer_threshold_ms=500):
+def benchmark_streaming(tts_engine, text, target_sr=16000, num_runs=10, play_audio=False, prebuffer_chunks=4):
     """Run streaming synthesis multiple times and report statistics.
 
     Args:
@@ -159,8 +136,6 @@ def benchmark_streaming(tts_engine, text, target_sr=16000, num_runs=10, play_aud
         num_runs: Number of synthesis runs (default: 10)
         play_audio: If True, play audio in real-time during first run (default: False)
         prebuffer_chunks: Number of chunks to buffer before starting playback (default: 4)
-        dynamic_rebuffer: Enable dynamic rebuffering when buffer runs low (default: True)
-        rebuffer_threshold_ms: Buffer threshold in ms for triggering rebuffering (default: 500)
 
     Returns:
         Tuple of (audio, sample_rate) from the last run
@@ -190,12 +165,7 @@ def benchmark_streaming(tts_engine, text, target_sr=16000, num_runs=10, play_aud
 
         if should_play:
             print(f"   Run {i+1}: [Playing audio as it generates...]", end='', flush=True)
-            player = StreamingAudioPlayer(
-                target_sr,
-                prebuffer_chunks=prebuffer_chunks,
-                dynamic_rebuffer=dynamic_rebuffer,
-                rebuffer_threshold_ms=rebuffer_threshold_ms
-            )
+            player = StreamingAudioPlayer(target_sr, prebuffer_chunks=prebuffer_chunks)
 
         for chunk, sr in tts_engine.synthesize_stream(text, target_sr=target_sr):
             if ttfb is None:
@@ -221,20 +191,14 @@ def benchmark_streaming(tts_engine, text, target_sr=16000, num_runs=10, play_aud
         # Stop audio playback and wait for buffer to drain
         if should_play and player:
             underruns = player.get_underrun_count()
-            rebuffers = player.get_rebuffer_count()
             player.stop()
             # Ensure we got TTFA (in case it never started during generation)
             if ttfa is None:
                 playback_start = player.get_playback_start_time()
                 if playback_start is not None:
                     ttfa = playback_start - t_start
-            if underruns > 0 or rebuffers > 0:
-                stats = []
-                if rebuffers > 0:
-                    stats.append(f"{rebuffers} rebuffer(s)")
-                if underruns > 0:
-                    stats.append(f"{underruns} underrun(s)")
-                print(f" [{', '.join(stats)}]", end='')
+            if underruns > 0:
+                print(f" [{underruns} underrun(s)]", end='')
 
         ttfb_times.append(ttfb)
         ttfa_times.append(ttfa if ttfa is not None else ttfb)  # Fallback to TTFB if no playback
@@ -269,6 +233,9 @@ def benchmark_streaming(tts_engine, text, target_sr=16000, num_runs=10, play_aud
     print(f">> Total synthesis time: {mean_total:.2f}s ± {stdev_total:.2f}s (mean ± stdev)")
     print(f">> Audio duration: {audio_duration:.2f}s")
     print(f">> Real-time factor: {real_time_factor:.2f}x (lower is faster)")
+    if real_time_factor > 1.0:
+        print(f"--> with RTF > 1, streaming is challenging.... Batch mode might be better.")
+
 
     # Chunk size statistics
     if chunk_sizes:
@@ -285,10 +252,11 @@ def benchmark_streaming(tts_engine, text, target_sr=16000, num_runs=10, play_aud
 run_warmup = True
 play_audio_on_first_run = True  # Set to True to hear streaming audio in real-time
 
+# Hardware acceleration
+device = "auto"  # "auto" (auto-detect), "cpu", "cuda", or "rknpu" (RK3588 NPU)
+
 # Streaming playback configuration
 prebuffer_chunks = 4  # Number of chunks to buffer before starting playback (increase if stuttering)
-dynamic_rebuffer = False  # Enable dynamic rebuffering when buffer runs low
-rebuffer_threshold_ms = 200  # Buffer threshold in ms for triggering rebuffering
 
 text = 'In a dramatic overnight operation, India said it launched missile and air strikes on nine sites across Pakistan.'
 # text = "The quick brown fox jumps over the lazy dog. Dr Smith asked whether it's 4:30 PM today."
@@ -296,7 +264,7 @@ target_sr = 16000
 
 # Reference text for voice cloning
 ref_text = text
-num_inf_runs = 1
+num_inf_runs = 10
 
 print("="*70)
 print("STREAMING TTS COMPARISON")
@@ -308,9 +276,6 @@ print(f"Benchmark runs: {num_inf_runs}")
 print(f"Play audio on first run: {play_audio_on_first_run}")
 if play_audio_on_first_run:
     print(f"Prebuffer chunks: {prebuffer_chunks}")
-    print(f"Dynamic rebuffering: {dynamic_rebuffer}")
-    if dynamic_rebuffer:
-        print(f"Rebuffer threshold: {rebuffer_threshold_ms}ms")
 print("="*70)
 print()
 
@@ -320,7 +285,7 @@ print()
 print(f">>> Running PocketTTS ONNX (Streaming)...")
 t1 = time.time()
 ref_audio = 'kokoro_tts.wav'
-pocket_tts_onnx = tts_engines.TTS_PocketTTSOnnx(voice=ref_audio, warmup=run_warmup)
+pocket_tts_onnx = tts_engines.TTS_PocketTTSOnnx(voice=ref_audio, warmup=run_warmup, lsd_steps=10, device=device)
 print(f'>> pockettts onnx model load and warmup time: {time.time()-t1:.2f}s')
 
 audio, sampling_rate = benchmark_streaming(
@@ -329,9 +294,7 @@ audio, sampling_rate = benchmark_streaming(
     target_sr,
     num_runs=num_inf_runs,
     play_audio=play_audio_on_first_run,
-    prebuffer_chunks=prebuffer_chunks,
-    dynamic_rebuffer=dynamic_rebuffer,
-    rebuffer_threshold_ms=rebuffer_threshold_ms
+    prebuffer_chunks=prebuffer_chunks
 )
 sf.write('pocket_tts_onnx_streaming.wav', audio, target_sr)
 print()

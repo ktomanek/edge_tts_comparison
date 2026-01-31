@@ -48,11 +48,32 @@ The dependencies for the following models aren't installed directly, to avoid ex
 
 Reporting mean ± stdev over 10 runs, inference time after 3x warmup.
 
+## Non-Streaming
+
 environment | platform | Piper | Kokoro | PocketTTS Onnx | 
 | -- | -- | -- | -- | --|
-| Raspberry Pi 5 | CPU  0.54s ± 0.01s | 4.09s ± 0.07s | xx 
-| Orange Pi 5 pro | CPU  0.54s ± 0.01s | 4.09s ± 0.07s | 5.60s ± 0.21s
-| MacBook Pro M2 | CPU | 0.15s ± 0.01s | 1.20s ± 0.02s | 1.25s ± 0.08s 
+| Raspberry Pi 5 | CPU | 0.53s ± 0.00s | 4.80s ± 0.01s | 6.98s ± 0.65s |
+| Orange Pi 5 pro | CPU | 0.54s ± 0.01s | 4.09s ± 0.07s | 5.43s ± 0.36s |
+| MacBook Pro M2 | CPU | 0.15s ± 0.01s | 1.20s ± 0.02s | 1.25s ± 0.08s  |
+
+## Streaming
+
+* PocketTTS supports output real streaming
+* We're here testing how well that works on different platforms
+* For PocketTTS, a parameter to control the trade-off between speed and quality is LSD (Least Significant Digit/Diffusion) steps. Default is 10.
+* We're reporting RTF for different LSD params, as well as:
+    * Time to First Byte (TTFB)
+    * Total synthesis time: total
+* In all cases, we pre-buffer 4 chunks before playback starts to prevent audio cutoff and stuttering
+
+--> on RPI, even with LSD steps reduced to 1, we're still facing a RTF > 1.0 and stuttering is audible.
+
+environment     | platform | LSD steps |  TTFB | TTFA | total time | RTF | audio duration |
+--- | --- | --- | --- | -- | -- | -- | -- |
+| MacBook Pro M2 | CPU  | 10  | 0.080s ± 0.006s | 0.130s ± 0.157s | 1.46s ± 0.09s | 0.21x |6.56s |
+| Raspberry Pi 5 | CPU | 10 |0.311s ± 0.008s | 0.347s ± 0.118s | 8.92s ± 0.42s | 1.28x | 6.96s |
+| Raspberry Pi 5 | CPU | 5 | 0.277s ± 0.002s | 0.308s ± 0.098s  | 7.57s ± 0.14s | 1.15x | 6.56s |
+| Orange Pi 5 pro | CPU | xxx|xxx| |
 
 
 # Licence
