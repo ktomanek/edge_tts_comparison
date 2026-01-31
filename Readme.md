@@ -2,20 +2,30 @@ Compare different small TTS models running on edge devices.
 
 # Installation
 
-* ```pip install -r requirements.txt```
-* ```pip install -e .```
+## System Dependencies
 
-* ensure espeak (or espeak-ng) is installed on your system and the library path set
-    * on Mac install: ```brew install espeak-ng```
+* **PortAudio** (required for audio playback):
+    * on Mac: ```brew install portaudio```
+    * on Linux (Ubuntu/Debian): ```sudo apt-get install portaudio19-dev```
+    * on Linux (Fedora/RHEL): ```sudo dnf install portaudio-devel```
+
+* **espeak-ng** (required for phonemization):
+    * on Mac: ```brew install espeak-ng```
     * on Linux: ```sudo apt-get install espeak-ng```
     * ensure ```PHONEMIZER_ESPEAK_LIBRARY``` is set, if it isn't follow below instruction to set it:
         * find the library with: ```brew list espeak-ng | grep dylib```
         * set accordingly, eg: ```export PHONEMIZER_ESPEAK_LIBRARY=/opt/homebrew/Cellar/espeak-ng/1.52.0/lib/libespeak-ng.1.dylib```
 
-* download models:
-    * kokoro: ```sh download_kokoro_models.sh``` (see different models in the script)
-    * piper: ```sh download_piper_models.sh``` (many other voices are available!)
-    * pocket-tts-onnx: ```sh download_pocket_tts.sh``` (onnx models)
+## Python Dependencies
+
+* ```pip install -r requirements.txt```
+* ```pip install -e .```
+
+## Download Models
+
+* kokoro: ```sh download_kokoro_models.sh``` (see different models in the script)
+* piper: ```sh download_piper_models.sh``` (many other voices are available!)
+* pocket-tts-onnx: ```sh download_pocket_tts.sh``` (onnx models)
 
 ## Included Models
 

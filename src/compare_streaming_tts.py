@@ -253,7 +253,7 @@ run_warmup = True
 play_audio_on_first_run = True  # Set to True to hear streaming audio in real-time
 
 # Hardware acceleration
-device = "auto"  # "auto" (auto-detect), "cpu", "cuda", or "rknpu" (RK3588 NPU)
+device = "auto"  # "auto" (auto-detect), "cpu", "cuda", "coreml" (Apple M1/M2/M3), or "rknpu" (RK3588 NPU)
 
 # Streaming playback configuration
 prebuffer_chunks = 4  # Number of chunks to buffer before starting playback (increase if stuttering)

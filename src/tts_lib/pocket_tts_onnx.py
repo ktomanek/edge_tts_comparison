@@ -92,11 +92,25 @@ class PocketTTSOnnx:
             return ["CPUExecutionProvider"]
         elif device == "cuda":
             return ["CUDAExecutionProvider", "CPUExecutionProvider"]
+        elif device == "rknpu":
+            # Rockchip RK3588 NPU acceleration
+            return ["RknpuExecutionProvider", "CPUExecutionProvider"]
+        elif device == "coreml":
+            # Apple CoreML acceleration (M1/M2/M3 Neural Engine)
+            return ["CoreMLExecutionProvider", "CPUExecutionProvider"]
         else:  # auto
             available = ort.get_available_providers()
-            if "CUDAExecutionProvider" in available:
-                return ["CUDAExecutionProvider", "CPUExecutionProvider"]
-            return ["CPUExecutionProvider"]
+            print(f"Available ONNX providers: {available}")
+            # Prefer hardware acceleration: RKNN NPU > CUDA > CPU
+            # Note: CoreML is excluded as it has limited ONNX op support and fails on PocketTTS models
+            if "RknpuExecutionProvider" in available:
+                providers = ["RknpuExecutionProvider", "CPUExecutionProvider"]
+            elif "CUDAExecutionProvider" in available:
+                providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+            else:
+                providers = ["CPUExecutionProvider"]
+            print(f"Chosen ONNX execution providers: {providers}")
+            return providers
 
     def _load_models(self):
         """Load ONNX models (dual model architecture)."""
