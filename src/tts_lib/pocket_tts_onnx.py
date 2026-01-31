@@ -60,6 +60,8 @@ class PocketTTSOnnx:
         device: str = "auto",
         temperature: float = 0.7,
         lsd_steps: int = 10,
+        num_threads: int = 4,
+        cpu_affinity: set = None,
     ):
         self.models_dir = Path(models_dir)
 
@@ -69,9 +71,22 @@ class PocketTTSOnnx:
         self.precision = precision
         self.temperature = temperature
         self.lsd_steps = lsd_steps
+        self.num_threads = num_threads
+
+        # Set CPU affinity if specified (for big.LITTLE architectures)
+        if cpu_affinity is not None:
+            import os
+            try:
+                os.sched_setaffinity(0, cpu_affinity)
+                print(f"CPU affinity set to cores: {sorted(cpu_affinity)}")
+            except (AttributeError, OSError) as e:
+                print(f"Warning: Could not set CPU affinity: {e}")
 
         # Setup execution providers
         self.providers = self._get_providers(device)
+
+        # Setup session options for threading control
+        self.sess_options = self._create_session_options()
 
         # Load tokenizer
         self.tokenizer = spm.SentencePieceProcessor()
@@ -85,6 +100,28 @@ class PocketTTSOnnx:
 
         # Cache for voice embeddings
         self._voice_cache = {}
+
+    def _create_session_options(self) -> ort.SessionOptions:
+        """Create ONNX Runtime session options with optimized threading settings."""
+        sess_options = ort.SessionOptions()
+
+        # Thread configuration for optimal performance on ARM big.LITTLE
+        sess_options.intra_op_num_threads = self.num_threads  # Threads for single op (use A76 cores)
+        sess_options.inter_op_num_threads = 1  # Sequential execution between ops
+
+        # Graph optimization
+        sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+
+        # Execution mode
+        sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+
+        # Memory optimizations (enabled by default, but explicit for clarity)
+        sess_options.enable_cpu_mem_arena = True
+        sess_options.enable_mem_pattern = True
+
+        print(f"ONNX Runtime threads: intra_op={self.num_threads}, inter_op=1")
+
+        return sess_options
 
     def _get_providers(self, device: str) -> list:
         """Get ONNX execution providers based on device setting."""
@@ -122,23 +159,28 @@ class PocketTTSOnnx:
 
         self.mimi_encoder = ort.InferenceSession(
             str(self.models_dir / "mimi_encoder.onnx"),
+            sess_options=self.sess_options,
             providers=self.providers
         )
         self.text_conditioner = ort.InferenceSession(
             str(self.models_dir / "text_conditioner.onnx"),
+            sess_options=self.sess_options,
             providers=self.providers
         )
         # Dual model split: main (transformer) + flow (flow network)
         self.flow_lm_main = ort.InferenceSession(
             str(self.models_dir / flow_main_file),
+            sess_options=self.sess_options,
             providers=self.providers
         )
         self.flow_lm_flow = ort.InferenceSession(
             str(self.models_dir / flow_flow_file),
+            sess_options=self.sess_options,
             providers=self.providers
         )
         self.mimi_decoder = ort.InferenceSession(
             str(self.models_dir / mimi_file),
+            sess_options=self.sess_options,
             providers=self.providers
         )
 

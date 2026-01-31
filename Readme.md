@@ -83,7 +83,7 @@ environment     | platform | LSD steps |  TTFB | TTFA | total time | RTF | audio
 | MacBook Pro M2 | CPU  | 10  | 0.080s ± 0.006s | 0.130s ± 0.157s | 1.46s ± 0.09s | 0.21x |6.56s |
 | Raspberry Pi 5 | CPU | 10 |0.311s ± 0.008s | 0.347s ± 0.118s | 8.92s ± 0.42s | 1.28x | 6.96s |
 | Raspberry Pi 5 | CPU | 5 | 0.277s ± 0.002s | 0.308s ± 0.098s  | 7.57s ± 0.14s | 1.15x | 6.56s |
-| Orange Pi 5 pro | CPU | xxx|xxx| |
+| Orange Pi 5 pro | CPU | 0.390s ± 0.000s|0.831s ± 0.000s| 12.25s ± 0.00s | 1.76x  | 6.96s|
 
 
 # Licence

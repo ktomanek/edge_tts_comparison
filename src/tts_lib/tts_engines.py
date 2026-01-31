@@ -241,7 +241,7 @@ class TTS_PocketTTSOnnx(TTS):
     Supports streaming and voice cloning from a short audio prompt.
     """
 
-    def _get_tts_model_instance(temperature: float=0.3, lsd_steps: int=10, device: str="auto"):
+    def _get_tts_model_instance(temperature: float=0.3, lsd_steps: int=10, device: str="auto", num_threads: int=4, cpu_affinity: set=None):
         from .pocket_tts_onnx import PocketTTSOnnx
         from pathlib import Path
 
@@ -255,12 +255,14 @@ class TTS_PocketTTSOnnx(TTS):
             tokenizer_path=str(tokenizer_path),
             temperature=temperature,
             lsd_steps=lsd_steps,
-            device=device
+            device=device,
+            num_threads=num_threads,
+            cpu_affinity=cpu_affinity
         )
         return tts_model
 
 
-    def __init__(self, voice='alba', temperature: float=0.3, lsd_steps: int=10, device: str="auto", warmup: bool=True):
+    def __init__(self, voice='alba', temperature: float=0.3, lsd_steps: int=10, device: str="auto", num_threads: int=4, cpu_affinity: set=None, warmup: bool=True):
         """Initialize PocketTTS ONNX with a voice.
 
         Args:
@@ -270,13 +272,17 @@ class TTS_PocketTTSOnnx(TTS):
             temperature: Generation diversity (0.3=deterministic/default, 0.7=balanced, 1.0=expressive)
             lsd_steps: Quality/speed tradeoff (1=faster/lower quality, 10=default)
             device: "auto" (auto-detect), "cpu", "cuda", "coreml" (Apple Neural Engine), or "rknpu" (RK3588 NPU)
+            num_threads: Number of threads for ONNX Runtime (default 4, set to number of A76 cores on big.LITTLE)
+            cpu_affinity: Set of CPU cores to bind to (e.g., {4,5,6,7} for A76 cores on Orange Pi 5), None = no binding
             warmup: Whether to run warmup synthesis
         """
         super().__init__()
         self.tts_model = TTS_PocketTTSOnnx._get_tts_model_instance(
             temperature=temperature,
             lsd_steps=lsd_steps,
-            device=device
+            device=device,
+            num_threads=num_threads,
+            cpu_affinity=cpu_affinity
         )
         self.sample_rate = 24000  # Default for PocketTTS
 

@@ -91,7 +91,7 @@ class StreamingAudioPlayer:
         if not self.started and self.chunks_received > 0:
             self._start_playback()
 
-        if self.stream:
+        if self.stream is not None:
             # Wait for buffer to drain before stopping
             max_wait_time = 10.0  # Maximum 10 seconds to drain
             check_interval = 0.05
@@ -251,9 +251,12 @@ def benchmark_streaming(tts_engine, text, target_sr=16000, num_runs=10, play_aud
 
 run_warmup = True
 play_audio_on_first_run = True  # Set to True to hear streaming audio in real-time
+                                 # Set to False on headless servers without audio hardware
 
 # Hardware acceleration
 device = "auto"  # "auto" (auto-detect), "cpu", "cuda", "coreml" (Apple M1/M2/M3), or "rknpu" (RK3588 NPU)
+num_threads = 4  # ONNX Runtime threads (set to number of big cores on ARM big.LITTLE, e.g., 4 for Orange Pi 5)
+cpu_affinity = {4,5,6,7}  # CPU core binding: None (no binding), or {4,5,6,7} for A76 cores on Orange Pi 5/RK3588
 
 # Streaming playback configuration
 prebuffer_chunks = 4  # Number of chunks to buffer before starting playback (increase if stuttering)
@@ -264,7 +267,7 @@ target_sr = 16000
 
 # Reference text for voice cloning
 ref_text = text
-num_inf_runs = 10
+num_inf_runs = 1
 
 print("="*70)
 print("STREAMING TTS COMPARISON")
@@ -285,7 +288,14 @@ print()
 print(f">>> Running PocketTTS ONNX (Streaming)...")
 t1 = time.time()
 ref_audio = 'kokoro_tts.wav'
-pocket_tts_onnx = tts_engines.TTS_PocketTTSOnnx(voice=ref_audio, warmup=run_warmup, lsd_steps=10, device=device)
+pocket_tts_onnx = tts_engines.TTS_PocketTTSOnnx(
+    voice=ref_audio,
+    warmup=run_warmup,
+    lsd_steps=10,
+    device=device,
+    num_threads=num_threads,
+    cpu_affinity=cpu_affinity
+)
 print(f'>> pockettts onnx model load and warmup time: {time.time()-t1:.2f}s')
 
 audio, sampling_rate = benchmark_streaming(
